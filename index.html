@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MNIST</title>
+    <meta name="description" content="Une petite interface pour faire de la reconnaissance de nombres écrits à la main."/>
+    <meta name="robots" content="index, follow" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="http://barth.paleologue.fr/ET.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.12.5"></script>
+</head>
+
+<body>
+    <h1>MNIST</h1>
+    <div id="wrapper">
+        <div id="b1">
+            <p>Dessine !</p>
+            <div id="canvas-container">
+                <canvas id="draw" width="200" height="200"></canvas>
+            </div>
+            <div id="clear">Nettoyer</div>
+        </div>
+
+        <div id="b2">
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>0</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>1</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>2</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>3</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>4</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>5</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>6</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>7</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>8</p>
+            </div>
+            <div class="container">
+                <div class="bar-container">
+                    <div class="bar"></div>
+                </div>
+                <p>9</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var canvas = document.getElementById('draw');
+        context = canvas.getContext("2d");
+
+        var clickX = new Array();
+        var clickY = new Array();
+        var clickDrag = new Array();
+        var paint;
+
+        function clearCanvas() {
+            clickX = new Array();
+            clickY = new Array();
+            clickDrag = new Array();
+            context.rect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
+            context.fillStyle = "black";
+            context.fill();
+        }
+        clearCanvas();
+        $("#clear").on("click", e => clearCanvas());
+
+        function addClick(x, y, dragging) {
+            clickX.push(x);
+            clickY.push(y);
+            clickDrag.push(dragging);
+        }
+
+        function redraw() {
+            context.beginPath();
+            context.rect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
+            context.fillStyle = "black";
+            context.fill();
+            context.strokeStyle = "#FFF";
+            context.lineJoin = "round";
+            context.lineWidth = 10;
+
+            for (var i = 0; i < clickX.length; i++) {
+                context.beginPath();
+                if (clickDrag[i] && i) {
+                    context.moveTo(clickX[i - 1], clickY[i - 1]);
+                } else {
+                    context.moveTo(clickX[i] - 1, clickY[i]);
+                }
+                context.lineTo(clickX[i], clickY[i]);
+                context.closePath();
+                context.stroke();
+            }
+        }
+
+        $('#draw').mousedown(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var mouseX = e.pageX - this.offsetLeft;
+            var mouseY = e.pageY - this.offsetTop;
+
+            paint = true;
+            addClick(mouseX, mouseY);
+            redraw();
+        });
+        $('#draw').mousemove(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (paint) {
+                addClick(e.pageX - this.offsetLeft, e.pageY - this.offsetTop, true);
+                redraw();
+            }
+        });
+        $('#draw').mouseup(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            paint = false;
+        });
+
+        $('#draw').mouseleave(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            paint = false;
+            compute();
+        });
+
+        $("#drawn").on("touchmove", function(e) {
+            $("#draw").trigger("mousemove");
+        });
+
+        var model;
+        (async function loadModel() {
+            model = await tf.loadModel("TFJS/model.json")
+            console.log(model)
+        })();
+
+        async function compute() {
+
+            var image = await $("#draw").get(0);
+
+            var tensor = await tf.fromPixels(image, 1).resizeNearestNeighbor([28, 28]).expandDims();
+            var predictions = await model.predict(tensor).data();
+
+            for (let i in predictions) {
+                $($("#b2 .container .bar-container .bar").get(i)).animate({
+                    "height": (predictions[i] * 100) + 1 + "%"
+                }, 500);
+            }
+        }
+
+        $("#compute").on("click", compute);
+    </script>
+</body>
+
+</html>
